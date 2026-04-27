@@ -12,11 +12,27 @@ static uint16_t vga_entry(char c, uint8_t color) {
     return (uint16_t)((uint8_t)c | ((uint16_t)color << 8));
 }
 
+static void vga_scroll(void) {
+    uint32_t row;
+    uint32_t col;
+
+    for (row = 1; row < VGA_HEIGHT; row++) {
+        for (col = 0; col < VGA_WIDTH; col++) {
+            VGA_MEMORY[(row - 1) * VGA_WIDTH + col] = VGA_MEMORY[row * VGA_WIDTH + col];
+        }
+    }
+
+    for (col = 0; col < VGA_WIDTH; col++) {
+        VGA_MEMORY[(VGA_HEIGHT - 1) * VGA_WIDTH + col] = vga_entry(' ', VGA_COLOR);
+    }
+}
+
 static void vga_newline(void) {
     cursor_col = 0;
     cursor_row++;
     if (cursor_row >= VGA_HEIGHT) {
-        cursor_row = 0;
+        vga_scroll();
+        cursor_row = VGA_HEIGHT - 1;
     }
 }
 

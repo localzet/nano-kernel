@@ -1,5 +1,4 @@
 #include "gdt.h"
-#include "idt.h"
 #include "interrupts.h"
 #include "pic.h"
 #include "pit.h"
@@ -27,7 +26,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
     vga_write("OK\n");
 
     vga_write("Initializing IDT... ");
-    idt_init();
+    interrupts_init();
     vga_write("OK\n");
 
     vga_write("Initializing PIC... ");
@@ -43,7 +42,6 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
     scheduler_init();
     tasks_init();
 
-    interrupts_init();
     interrupts_enable();
 
     vga_write("Starting scheduler...\n\n");

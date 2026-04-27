@@ -1,4 +1,5 @@
 #include "interrupts.h"
+#include "idt.h"
 #include "pic.h"
 #include "pit.h"
 #include "scheduler.h"
@@ -41,6 +42,7 @@ static const char* g_exception_names[32] = {
 };
 
 void interrupts_init(void) {
+    idt_init();
 }
 
 void interrupts_enable(void) {

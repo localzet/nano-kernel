@@ -82,6 +82,8 @@ Then follow printed steps to create a VM and attach `build/nanokernel.iso` as op
 - 32-bit x86 only
 - Paging is not enabled
 - No true ring3 user mode yet
+- Syscalls are currently invoked from ring0 demo tasks
+- `int 0x80` ABI is implemented, but real ring3 isolation is planned
 - No filesystem
 - No disk driver
 - All tasks share one address space

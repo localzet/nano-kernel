@@ -73,7 +73,7 @@ $(ISO_IMAGE): $(KERNEL_ELF) grub/grub.cfg
 	@mkdir -p $(ISO_DIR)/boot/grub
 	cp $(KERNEL_ELF) $(ISO_DIR)/boot/kernel.elf
 	cp grub/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
-	$(GRUB_MKRESCUE) -o $@ $(ISO_DIR) >/dev/null 2>&1
+	$(GRUB_MKRESCUE) -o $@ $(ISO_DIR)
 
 run: iso
 	qemu-system-i386 -cdrom $(ISO_IMAGE)

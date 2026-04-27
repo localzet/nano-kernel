@@ -128,6 +128,7 @@ interrupt_frame_t* scheduler_on_sleep(interrupt_frame_t* current, uint32_t ticks
         return current;
     }
 
+    current->eax = 0;
     g_tasks[g_current].frame = current;
     g_tasks[g_current].sleep_until = pit_get_ticks() + ticks;
     g_tasks[g_current].state = TASK_SLEEPING;
@@ -140,7 +141,6 @@ interrupt_frame_t* scheduler_on_sleep(interrupt_frame_t* current, uint32_t ticks
 
     g_current = next;
     g_tasks[g_current].state = TASK_RUNNING;
-    g_tasks[g_current].frame->eax = 0;
     return g_tasks[g_current].frame;
 }
 

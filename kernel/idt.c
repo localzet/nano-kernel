@@ -101,7 +101,7 @@ void idt_init(void) {
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
 
     idt_set_gate(32, (uint32_t)irq0, 0x08, 0x8E);
-    idt_set_gate(128, (uint32_t)isr128, 0x08, 0xEE);
+    idt_set_gate(128, (uint32_t)isr128, 0x08, 0x8E);
 
     idt_ptr.limit = (uint16_t)(sizeof(idt) - 1);
     idt_ptr.base = (uint32_t)&idt;
