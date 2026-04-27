@@ -1,5 +1,5 @@
-#ifndef IO_H
-#define IO_H
+#ifndef NANOKERNEL_IO_H
+#define NANOKERNEL_IO_H
 
 #include "types.h"
 

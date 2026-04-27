@@ -1,25 +1,27 @@
-OUTPUT_FORMAT(elf32-i386)
 ENTRY(kernel_entry)
 
-SECTIONS {
-    . = 0x1000;
+SECTIONS
+{
+    . = 1M;
 
-    .text : {
+    .multiboot ALIGN(4) : {
+        KEEP(*(.multiboot))
+    }
+
+    .text ALIGN(4K) : {
         *(.text*)
     }
 
-    .rodata : {
+    .rodata ALIGN(4K) : {
         *(.rodata*)
     }
 
-    .data : {
+    .data ALIGN(4K) : {
         *(.data*)
     }
 
-    __bss_start = .;
-    .bss : {
-        *(.bss*)
+    .bss ALIGN(4K) : {
         *(COMMON)
+        *(.bss*)
     }
-    __bss_end = .;
 }

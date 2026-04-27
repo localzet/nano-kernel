@@ -1,17 +1,32 @@
-#ifndef SCHEDULER_H
-#define SCHEDULER_H
+#ifndef NANOKERNEL_SCHEDULER_H
+#define NANOKERNEL_SCHEDULER_H
 
 #include "interrupts.h"
 #include "types.h"
 
 typedef void (*task_entry_t)(void);
 
+typedef enum task_state {
+    TASK_UNUSED = 0,
+    TASK_READY,
+    TASK_RUNNING,
+    TASK_SLEEPING
+} task_state_t;
+
+typedef struct task {
+    int32_t pid;
+    task_state_t state;
+    uint32_t sleep_until;
+    interrupt_frame_t* frame;
+    uint8_t* stack_base;
+} task_t;
+
 void scheduler_init(void);
-void scheduler_add_task(int pid, task_entry_t entry);
+int32_t scheduler_create_task(int32_t pid, task_entry_t entry, uint8_t* stack_base, uint32_t stack_size);
 void scheduler_start(void);
 
-cpu_state_t* scheduler_on_tick(cpu_state_t* state);
-cpu_state_t* scheduler_on_sleep(cpu_state_t* state, uint32_t ticks);
-int scheduler_current_pid(void);
+interrupt_frame_t* scheduler_on_timer(interrupt_frame_t* current);
+interrupt_frame_t* scheduler_on_sleep(interrupt_frame_t* current, uint32_t ticks);
+int32_t scheduler_current_pid(void);
 
 #endif

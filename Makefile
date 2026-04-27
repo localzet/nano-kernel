@@ -1,64 +1,90 @@
+PROJECT := nanokernel
 BUILD_DIR := build
-OBJ_DIR := $(BUILD_DIR)/obj
+ISO_DIR := iso
 
-CROSS ?=
-CC := $(if $(CROSS),$(CROSS)gcc,gcc)
-LD := $(if $(CROSS),$(CROSS)ld,ld)
-OBJCOPY := $(if $(CROSS),$(CROSS)objcopy,objcopy)
+CROSS ?= i686-elf-
+CC := $(CROSS)gcc
+LD := $(CROSS)ld
+OBJCOPY := $(CROSS)objcopy
+
 NASM := nasm
+GRUB_MKRESCUE := grub-mkrescue
 
-CFLAGS := -m32 -ffreestanding -fno-pic -fno-stack-protector -fno-builtin -Wall -Wextra -O2 -Iinclude
+CC_FALLBACK := gcc
+LD_FALLBACK := ld
+OBJCOPY_FALLBACK := objcopy
+
+ifeq ($(shell command -v $(CC) 2>/dev/null),)
+CC := $(CC_FALLBACK)
+LD := $(LD_FALLBACK)
+OBJCOPY := $(OBJCOPY_FALLBACK)
+endif
+
+CFLAGS := -std=c99 -m32 -ffreestanding -fno-stack-protector -fno-pic -fno-builtin -Wall -Wextra -Werror -O2 -Iinclude
 LDFLAGS := -m elf_i386 -T linker.ld -nostdlib
 
 C_SOURCES := \
 	kernel/kernel.c \
+	kernel/vga.c \
+	kernel/gdt.c \
+	kernel/idt.c \
+	kernel/pic.c \
+	kernel/pit.c \
 	kernel/interrupts.c \
 	kernel/scheduler.c \
-	user/user_program.c
+	kernel/tasks.c
 
-ASM_ELF_SOURCES := \
-	asm/kernel_entry.asm \
-	asm/interrupts.asm \
-	asm/context_switch.asm \
-	asm/syscall.asm
+ASM_SOURCES := \
+	arch/x86/boot/multiboot.asm \
+	arch/x86/boot/entry.asm \
+	arch/x86/gdt_flush.asm \
+	arch/x86/idt_load.asm \
+	arch/x86/interrupts.asm \
+	arch/x86/context_switch.asm \
+	arch/x86/syscall.asm
 
-C_OBJECTS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(C_SOURCES))
-ASM_OBJECTS := $(patsubst %.asm,$(OBJ_DIR)/%.o,$(ASM_ELF_SOURCES))
+C_OBJS := $(patsubst %.c,$(BUILD_DIR)/obj/%.o,$(C_SOURCES))
+ASM_OBJS := $(patsubst %.asm,$(BUILD_DIR)/obj/%.o,$(ASM_SOURCES))
+
 KERNEL_ELF := $(BUILD_DIR)/kernel.elf
-KERNEL_BIN := $(BUILD_DIR)/kernel.bin
-BOOT_BIN := $(BUILD_DIR)/boot.bin
-IMAGE_BIN := $(BUILD_DIR)/os-image.bin
+ISO_IMAGE := $(BUILD_DIR)/nanokernel.iso
 
-.PHONY: all clean run
+.PHONY: all kernel iso run run-vbox clean
 
-all: $(IMAGE_BIN)
+all: kernel iso
 
-$(OBJ_DIR)/%.o: %.c
+kernel: $(KERNEL_ELF)
+
+$(BUILD_DIR)/obj/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/%.o: %.asm
+$(BUILD_DIR)/obj/%.o: %.asm
 	@mkdir -p $(dir $@)
 	$(NASM) -f elf32 $< -o $@
 
-$(KERNEL_ELF): $(C_OBJECTS) $(ASM_OBJECTS) linker.ld
+$(KERNEL_ELF): $(C_OBJS) $(ASM_OBJS) linker.ld
 	@mkdir -p $(BUILD_DIR)
-	$(LD) $(LDFLAGS) -o $@ $(ASM_OBJECTS) $(C_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(ASM_OBJS) $(C_OBJS)
 
-$(KERNEL_BIN): $(KERNEL_ELF)
-	$(OBJCOPY) -O binary $< $@
+iso: $(ISO_IMAGE)
 
-$(BOOT_BIN): boot/boot.asm
-	@mkdir -p $(BUILD_DIR)
-	$(NASM) -f bin $< -o $@
+$(ISO_IMAGE): $(KERNEL_ELF) grub/grub.cfg
+	@mkdir -p $(ISO_DIR)/boot/grub
+	cp $(KERNEL_ELF) $(ISO_DIR)/boot/kernel.elf
+	cp grub/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
+	$(GRUB_MKRESCUE) -o $@ $(ISO_DIR) >/dev/null 2>&1
 
-$(IMAGE_BIN): $(BOOT_BIN) $(KERNEL_BIN)
-	dd if=/dev/zero of=$@ bs=512 count=2880 status=none
-	dd if=$(BOOT_BIN) of=$@ conv=notrunc status=none
-	dd if=$(KERNEL_BIN) of=$@ bs=512 seek=1 conv=notrunc status=none
+run: iso
+	qemu-system-i386 -cdrom $(ISO_IMAGE)
 
-run: $(IMAGE_BIN)
-	qemu-system-x86_64 -drive format=raw,file=$(IMAGE_BIN)
+run-vbox: iso
+	@echo "VirtualBox quick steps:"
+	@echo "1. Create VM: Type=Other, Version=Other/Unknown (32-bit)."
+	@echo "2. Allocate RAM: 64MB or more."
+	@echo "3. Disable hard disk (or leave empty)."
+	@echo "4. Open Settings -> Storage -> attach $(abspath $(ISO_IMAGE)) as optical drive."
+	@echo "5. Start VM."
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(ISO_DIR)
