@@ -36,6 +36,16 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
         vga_write("\n");
     }
 
+    if (multiboot_magic == 0x2BADB002 &&
+        mbi != (const multiboot_info_t*)0 &&
+        (mbi->flags & MULTIBOOT_INFO_MODS) != 0 &&
+        mbi->mods_count > 0) {
+        const multiboot_module_t* mods = (const multiboot_module_t*)(uintptr_t)mbi->mods_addr;
+        initrd_start = mods[0].mod_start;
+        initrd_end = mods[0].mod_end;
+        has_initrd_module = true;
+    }
+
     vga_write("Initializing GDT... ");
     gdt_init();
     vga_write("OK\n");
