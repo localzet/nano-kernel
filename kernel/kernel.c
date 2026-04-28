@@ -13,9 +13,17 @@
 
 void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
     const multiboot_info_t* mbi = (const multiboot_info_t*)(uintptr_t)multiboot_info;
-    bool has_initrd_module = false;
-    uint32_t initrd_start = 0;
-    uint32_t initrd_end = 0;
+    uint32_t initrd_mod_start = 0;
+    uint32_t initrd_mod_end = 0;
+
+    if (multiboot_magic == 0x2BADB002 &&
+        mbi != (const multiboot_info_t*)0 &&
+        (mbi->flags & MULTIBOOT_INFO_MODS) != 0 &&
+        mbi->mods_count > 0) {
+        const multiboot_module_t* mods = (const multiboot_module_t*)(uintptr_t)mbi->mods_addr;
+        initrd_mod_start = mods[0].mod_start;
+        initrd_mod_end = mods[0].mod_end;
+    }
 
     vga_clear();
     vga_write("NanoKernel OS\n");
@@ -51,7 +59,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
     vga_write("OK\n");
 
     vga_write("Initializing paging... ");
-    paging_init();
+    paging_init(initrd_mod_end);
     vga_write("OK\n");
 
     vga_write("Initializing PIT... ");
@@ -63,8 +71,8 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
     vga_write("OK\n");
 
     vga_write("Initializing initrd FS... ");
-    if (has_initrd_module) {
-        fs_init(initrd_start, initrd_end);
+    if (initrd_mod_end > initrd_mod_start) {
+        fs_init(initrd_mod_start, initrd_mod_end);
         vga_write("OK\n");
     } else {
         fs_init(0, 0);
