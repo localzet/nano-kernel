@@ -36,7 +36,8 @@ C_SOURCES := \
 	kernel/tasks.c \
 	kernel/keyboard.c \
 	kernel/shell.c \
-	kernel/fs.c
+	kernel/fs.c \
+	kernel/paging.c
 
 ASM_SOURCES := \
 	arch/x86/boot/multiboot.asm \

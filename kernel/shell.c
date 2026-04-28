@@ -1,6 +1,7 @@
 #include "fs.h"
 #include "io.h"
 #include "keyboard.h"
+#include "paging.h"
 #include "pit.h"
 #include "scheduler.h"
 #include "shell.h"
@@ -28,6 +29,18 @@ static void shell_write_u32(uint32_t value) {
     while (i > 0) {
         char out[2];
         out[0] = buf[--i];
+        out[1] = '\0';
+        shell_write(out);
+    }
+}
+
+static void shell_write_hex32(uint32_t value) {
+    static const char* hex = "0123456789ABCDEF";
+    int32_t i;
+    shell_write("0x");
+    for (i = 7; i >= 0; i--) {
+        char out[2];
+        out[0] = hex[(value >> (i * 4)) & 0xFu];
         out[1] = '\0';
         shell_write(out);
     }
@@ -78,6 +91,7 @@ static void shell_print_help(void) {
     shell_write("  ps     - show tasks\n");
     shell_write("  ls     - list initrd files\n");
     shell_write("  cat X  - print file contents\n");
+    shell_write("  mem    - show paging/memory info\n");
     shell_write("  about  - show kernel info\n");
     shell_write("  reboot - reboot machine\n");
 }
@@ -136,6 +150,24 @@ static void shell_reboot(void) {
     }
 }
 
+static void shell_print_mem(void) {
+    shell_write("paging enabled: ");
+    shell_write(paging_is_enabled() ? "yes\n" : "no\n");
+
+    shell_write("identity mapped range: ");
+    shell_write_hex32(paging_identity_start());
+    shell_write(" - ");
+    shell_write_hex32(paging_identity_end());
+    shell_write("\n");
+
+    shell_write("kernel start: ");
+    shell_write_hex32(paging_kernel_start());
+    shell_write("\n");
+    shell_write("kernel end: ");
+    shell_write_hex32(paging_kernel_end());
+    shell_write("\n");
+}
+
 static void shell_execute(const char* line) {
     if (shell_streq(line, "help")) {
         shell_print_help();
@@ -163,9 +195,11 @@ static void shell_execute(const char* line) {
             shell_print_file(data, size);
             shell_write("\n");
         }
+    } else if (shell_streq(line, "mem")) {
+        shell_print_mem();
     } else if (shell_streq(line, "about")) {
-        shell_write("NanoKernel OS v0.4\n");
-        shell_write("Keyboard IRQ + shell + initrd FS\n");
+        shell_write("NanoKernel OS v0.5\n");
+        shell_write("Keyboard + shell + initrd FS + paging\n");
     } else if (shell_streq(line, "reboot")) {
         shell_reboot();
     } else if (line[0] == '\0') {
