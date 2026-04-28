@@ -1,0 +1,3 @@
+Welcome to NanoKernel.
+Type 'help' to list commands.
+Use 'ls' and 'cat <file>' to explore initrd files.

@@ -1,0 +1,5 @@
+NanoKernel OS v0.4
+- Preemptive timer-based scheduler
+- Keyboard IRQ1 input
+- Minimal shell
+- Initrd-backed read-only virtual filesystem

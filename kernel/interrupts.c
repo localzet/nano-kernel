@@ -1,5 +1,6 @@
 #include "interrupts.h"
 #include "idt.h"
+#include "keyboard.h"
 #include "pic.h"
 #include "pit.h"
 #include "scheduler.h"
@@ -49,6 +50,12 @@ void interrupts_enable(void) {
     __asm__ volatile ("sti");
 }
 
+static uint32_t read_cr2(void) {
+    uint32_t value;
+    __asm__ volatile ("mov %%cr2, %0" : "=r"(value));
+    return value;
+}
+
 static void panic_exception(interrupt_frame_t* frame) {
     vga_write("\n[EXCEPTION] ");
     if (frame->int_no < 32) {
@@ -60,6 +67,21 @@ static void panic_exception(interrupt_frame_t* frame) {
     vga_write_dec(frame->int_no);
     vga_write(" err=");
     vga_write_hex(frame->err_code);
+    if (frame->int_no == 14) {
+        uint32_t err = frame->err_code;
+        vga_write(" cr2=");
+        vga_write_hex(read_cr2());
+        vga_write("\n[PAGE FAULT FLAGS] present=");
+        vga_write((err & 0x1u) ? "yes" : "no");
+        vga_write(" write=");
+        vga_write((err & 0x2u) ? "yes" : "no");
+        vga_write(" user=");
+        vga_write((err & 0x4u) ? "yes" : "no");
+        vga_write(" reserved=");
+        vga_write((err & 0x8u) ? "yes" : "no");
+        vga_write(" instruction_fetch=");
+        vga_write((err & 0x10u) ? "yes" : "no");
+    }
     vga_write("\nSystem halted.\n");
 
     __asm__ volatile ("cli");
@@ -102,6 +124,12 @@ interrupt_frame_t* interrupt_dispatch(interrupt_frame_t* frame) {
         pit_on_tick();
         pic_send_eoi(0);
         return scheduler_on_timer(frame);
+    }
+
+    if (frame->int_no == 33) {
+        keyboard_handle_irq();
+        pic_send_eoi(1);
+        return frame;
     }
 
     if (frame->int_no == 128) {
