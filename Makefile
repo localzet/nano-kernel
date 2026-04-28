@@ -32,7 +32,9 @@ C_SOURCES := \
 	kernel/pit.c \
 	kernel/interrupts.c \
 	kernel/scheduler.c \
-	kernel/tasks.c
+	kernel/tasks.c \
+	kernel/keyboard.c \
+	kernel/shell.c
 
 ASM_SOURCES := \
 	arch/x86/boot/multiboot.asm \

@@ -1,5 +1,6 @@
 #include "gdt.h"
 #include "interrupts.h"
+#include "keyboard.h"
 #include "pic.h"
 #include "pit.h"
 #include "scheduler.h"
@@ -35,6 +36,10 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info) {
 
     vga_write("Initializing PIT... ");
     pit_init(100);
+    vga_write("OK\n");
+
+    vga_write("Initializing keyboard... ");
+    keyboard_init();
     vga_write("OK\n");
 
     vga_write("Initializing syscalls... OK\n");
