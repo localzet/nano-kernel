@@ -151,6 +151,25 @@ int32_t scheduler_current_pid(void) {
     return g_tasks[g_current].pid;
 }
 
+int32_t scheduler_task_count(void) {
+    return g_task_count;
+}
+
+int32_t scheduler_get_task_info(int32_t index, scheduler_task_info_t* out) {
+    if (out == (scheduler_task_info_t*)0) {
+        return -1;
+    }
+
+    if (index < 0 || index >= g_task_count) {
+        return -1;
+    }
+
+    out->pid = g_tasks[index].pid;
+    out->state = g_tasks[index].state;
+    out->sleep_until = g_tasks[index].sleep_until;
+    return 0;
+}
+
 void scheduler_start(void) {
     int32_t next = scheduler_pick_next();
     if (next < 0) {

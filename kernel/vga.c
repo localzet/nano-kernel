@@ -51,6 +51,14 @@ void vga_putc(char c) {
         return;
     }
 
+    if (c == '\b') {
+        if (cursor_col > 0) {
+            cursor_col--;
+            VGA_MEMORY[cursor_row * VGA_WIDTH + cursor_col] = vga_entry(' ', VGA_COLOR);
+        }
+        return;
+    }
+
     VGA_MEMORY[cursor_row * VGA_WIDTH + cursor_col] = vga_entry(c, VGA_COLOR);
     cursor_col++;
 

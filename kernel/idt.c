@@ -35,6 +35,7 @@ extern void isr29(void);
 extern void isr30(void);
 extern void isr31(void);
 extern void irq0(void);
+extern void irq1(void);
 extern void isr128(void);
 
 typedef struct idt_entry {
@@ -101,6 +102,7 @@ void idt_init(void) {
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
 
     idt_set_gate(32, (uint32_t)irq0, 0x08, 0x8E);
+    idt_set_gate(33, (uint32_t)irq1, 0x08, 0x8E);
     idt_set_gate(128, (uint32_t)isr128, 0x08, 0x8E);
 
     idt_ptr.limit = (uint16_t)(sizeof(idt) - 1);

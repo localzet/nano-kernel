@@ -1,5 +1,6 @@
 #include "interrupts.h"
 #include "idt.h"
+#include "keyboard.h"
 #include "pic.h"
 #include "pit.h"
 #include "scheduler.h"
@@ -102,6 +103,12 @@ interrupt_frame_t* interrupt_dispatch(interrupt_frame_t* frame) {
         pit_on_tick();
         pic_send_eoi(0);
         return scheduler_on_timer(frame);
+    }
+
+    if (frame->int_no == 33) {
+        keyboard_handle_irq();
+        pic_send_eoi(1);
+        return frame;
     }
 
     if (frame->int_no == 128) {
