@@ -1,9 +1,11 @@
 #include "scheduler.h"
+#include "shell.h"
 #include "syscall.h"
 #include "tasks.h"
 
 static uint8_t g_task_a_stack[4096];
 static uint8_t g_task_b_stack[4096];
+static uint8_t g_shell_stack[4096];
 
 static void write_pid_prefix(const char* prefix, int32_t pid) {
     char buf[16];
@@ -83,4 +85,5 @@ static void task_b(void) {
 void tasks_init(void) {
     scheduler_create_task(1, task_a, g_task_a_stack, sizeof(g_task_a_stack));
     scheduler_create_task(2, task_b, g_task_b_stack, sizeof(g_task_b_stack));
+    scheduler_create_task(3, shell_task_entry, g_shell_stack, sizeof(g_shell_stack));
 }

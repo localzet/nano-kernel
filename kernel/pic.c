@@ -26,7 +26,7 @@ void pic_init(void) {
     outb(PIC1_DATA, ICW4_8086);
     outb(PIC2_DATA, ICW4_8086);
 
-    outb(PIC1_DATA, mask1 & (uint8_t)~0x01);
+    outb(PIC1_DATA, mask1 & (uint8_t)~0x03);
     outb(PIC2_DATA, mask2);
 }
 
