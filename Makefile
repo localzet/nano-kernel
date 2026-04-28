@@ -9,6 +9,7 @@ OBJCOPY := $(CROSS)objcopy
 
 NASM := nasm
 GRUB_MKRESCUE := grub-mkrescue
+HOSTCC := gcc
 
 CC_FALLBACK := gcc
 LD_FALLBACK := ld
@@ -32,7 +33,11 @@ C_SOURCES := \
 	kernel/pit.c \
 	kernel/interrupts.c \
 	kernel/scheduler.c \
-	kernel/tasks.c
+	kernel/tasks.c \
+	kernel/keyboard.c \
+	kernel/shell.c \
+	kernel/fs.c \
+	kernel/paging.c
 
 ASM_SOURCES := \
 	arch/x86/boot/multiboot.asm \
@@ -48,6 +53,9 @@ ASM_OBJS := $(patsubst %.asm,$(BUILD_DIR)/obj/%.o,$(ASM_SOURCES))
 
 KERNEL_ELF := $(BUILD_DIR)/kernel.elf
 ISO_IMAGE := $(BUILD_DIR)/nanokernel.iso
+INITRD_IMAGE := $(BUILD_DIR)/initrd.bin
+MKINITRD_TOOL := $(BUILD_DIR)/mkinitrd
+INITRD_FILES := $(sort $(wildcard initrd/*.txt))
 
 .PHONY: all kernel iso run run-vbox clean
 
@@ -69,9 +77,17 @@ $(KERNEL_ELF): $(C_OBJS) $(ASM_OBJS) linker.ld
 
 iso: $(ISO_IMAGE)
 
-$(ISO_IMAGE): $(KERNEL_ELF) grub/grub.cfg
+$(MKINITRD_TOOL): tools/mkinitrd.c
+	@mkdir -p $(BUILD_DIR)
+	$(HOSTCC) -std=c99 -O2 -Wall -Wextra -Werror $< -o $@
+
+$(INITRD_IMAGE): $(MKINITRD_TOOL) $(INITRD_FILES)
+	$(MKINITRD_TOOL) $@ $(INITRD_FILES)
+
+$(ISO_IMAGE): $(KERNEL_ELF) $(INITRD_IMAGE) grub/grub.cfg
 	@mkdir -p $(ISO_DIR)/boot/grub
 	cp $(KERNEL_ELF) $(ISO_DIR)/boot/kernel.elf
+	cp $(INITRD_IMAGE) $(ISO_DIR)/boot/initrd.bin
 	cp grub/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	$(GRUB_MKRESCUE) -o $@ $(ISO_DIR)
 

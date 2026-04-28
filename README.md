@@ -11,11 +11,16 @@ NanoKernel OS is a minimal 32-bit x86 protected-mode hobby operating system kern
 - PIC remapping and EOI support
 - PIT timer and global tick counter
 - Interrupt dispatcher in C
+- Multiboot module parsing for initrd
+- Basic 32-bit paging (identity-mapped first 16MB)
 - Syscalls via `int 0x80`:
   - `SYS_WRITE`
   - `SYS_SLEEP`
   - `SYS_GETPID`
 - Round-robin scheduler
+- Keyboard IRQ1 driver with scancode input buffer
+- Minimal shell task with commands: `help`, `clear`, `ticks`, `ps`, `about`, `reboot`, `ls`, `cat <file>`, `mem`
+- Initrd-backed read-only virtual filesystem
 - Two demo tasks that run repeatedly
 - Bootable ISO image for QEMU and VirtualBox
 
@@ -30,7 +35,11 @@ NanoKernel OS is a minimal 32-bit x86 protected-mode hobby operating system kern
 - `include/`
   - Public kernel headers
 - `grub/grub.cfg`
-  - GRUB menu configuration
+  - GRUB menu configuration (kernel + initrd module)
+- `initrd/`
+  - Source text files packaged into initrd image
+- `tools/mkinitrd.c`
+  - Host-side tool that builds `initrd.bin`
 
 ## Build Requirements
 
@@ -55,6 +64,7 @@ make iso
 
 Artifacts:
 - `build/kernel.elf`
+- `build/initrd.bin`
 - `build/nanokernel.iso`
 
 ## Run in QEMU
@@ -77,15 +87,65 @@ make run-vbox
 
 Then follow printed steps to create a VM and attach `build/nanokernel.iso` as optical media.
 
+## Initrd + Read-Only Filesystem
+
+NanoKernel v0.4 packages a simple custom initrd image and loads it via GRUB as a Multiboot module:
+
+```cfg
+module /boot/initrd.bin
+```
+
+The initrd format is intentionally small and static:
+- Header: `magic`, `file_count`
+- Fixed-size file table entries: `name[32]`, `offset`, `size`
+- Raw file data blobs
+
+Kernel APIs:
+- `fs_init(start, end)` initializes the filesystem from module memory.
+- `fs_list(cb, user)` enumerates files.
+- `fs_find(name)` finds file metadata by name.
+- `fs_read(name, &data, &size)` returns a pointer/size to file contents.
+
+Shell integration:
+- `ls` lists available initrd files.
+- `cat <filename>` prints file contents.
+
+Included sample files:
+- `hello.txt`
+- `about.txt`
+- `motd.txt`
+
+## Paging + Memory Model (v0.5)
+
+NanoKernel v0.5 enables 32-bit paging in early boot:
+- `paging_init()` is called during kernel init after GDT setup.
+- A 4KB-aligned page directory and page tables are built statically.
+- The first 16MB of physical memory is identity-mapped (RW, present).
+- CR3 is loaded with the page directory physical address.
+- CR0.PG is set to enable paging.
+
+Current memory model:
+- Kernel remains at its existing physical/load addresses (no higher-half mapping yet).
+- Identity mapping keeps early boot/kernel addresses valid.
+- No heap/page allocator yet; mappings are static.
+
+Page-fault diagnostics:
+- Faulting linear address from `CR2`
+- Error-code decoding for: present, write, user, reserved, instruction fetch (bit 4 when provided by CPU)
+
+Shell support:
+- `mem` prints paging enabled state, identity-mapped range, and linker-provided `kernel_start`/`kernel_end` addresses.
+
 ## Current Limitations
 
 - 32-bit x86 only
-- Paging is not enabled
+- Paging is currently static identity mapping only (first 16MB)
 - No true ring3 user mode yet
 - Syscalls are currently invoked from ring0 demo tasks
 - `int 0x80` ABI is implemented, but real ring3 isolation is planned
-- No filesystem
-- No disk driver
+- Filesystem is initrd-only and read-only
+- No disk block driver
+- No heap/page allocator yet
 - All tasks share one address space
 
 ## Roadmap

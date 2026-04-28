@@ -36,6 +36,7 @@ global isr29
 global isr30
 global isr31
 global irq0
+global irq1
 global isr128
 
 %macro ISR_NOERR 1
@@ -87,6 +88,11 @@ ISR_NOERR 31
 irq0:
     push dword 0
     push dword 32
+    jmp interrupt_common
+
+irq1:
+    push dword 0
+    push dword 33
     jmp interrupt_common
 
 isr128:
