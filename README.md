@@ -11,11 +11,15 @@ NanoKernel OS is a minimal 32-bit x86 protected-mode hobby operating system kern
 - PIC remapping and EOI support
 - PIT timer and global tick counter
 - Interrupt dispatcher in C
+- Multiboot module parsing for initrd
 - Syscalls via `int 0x80`:
   - `SYS_WRITE`
   - `SYS_SLEEP`
   - `SYS_GETPID`
 - Round-robin scheduler
+- Keyboard IRQ1 driver with scancode input buffer
+- Minimal shell task with commands: `help`, `clear`, `ticks`, `ps`, `about`, `reboot`, `ls`, `cat <file>`
+- Initrd-backed read-only virtual filesystem
 - Two demo tasks that run repeatedly
 - Bootable ISO image for QEMU and VirtualBox
 
@@ -30,7 +34,11 @@ NanoKernel OS is a minimal 32-bit x86 protected-mode hobby operating system kern
 - `include/`
   - Public kernel headers
 - `grub/grub.cfg`
-  - GRUB menu configuration
+  - GRUB menu configuration (kernel + initrd module)
+- `initrd/`
+  - Source text files packaged into initrd image
+- `tools/mkinitrd.c`
+  - Host-side tool that builds `initrd.bin`
 
 ## Build Requirements
 
@@ -55,6 +63,7 @@ make iso
 
 Artifacts:
 - `build/kernel.elf`
+- `build/initrd.bin`
 - `build/nanokernel.iso`
 
 ## Run in QEMU
@@ -77,6 +86,34 @@ make run-vbox
 
 Then follow printed steps to create a VM and attach `build/nanokernel.iso` as optical media.
 
+## Initrd + Read-Only Filesystem
+
+NanoKernel v0.4 packages a simple custom initrd image and loads it via GRUB as a Multiboot module:
+
+```cfg
+module /boot/initrd.bin
+```
+
+The initrd format is intentionally small and static:
+- Header: `magic`, `file_count`
+- Fixed-size file table entries: `name[32]`, `offset`, `size`
+- Raw file data blobs
+
+Kernel APIs:
+- `fs_init(start, end)` initializes the filesystem from module memory.
+- `fs_list(cb, user)` enumerates files.
+- `fs_find(name)` finds file metadata by name.
+- `fs_read(name, &data, &size)` returns a pointer/size to file contents.
+
+Shell integration:
+- `ls` lists available initrd files.
+- `cat <filename>` prints file contents.
+
+Included sample files:
+- `hello.txt`
+- `about.txt`
+- `motd.txt`
+
 ## Current Limitations
 
 - 32-bit x86 only
@@ -84,8 +121,8 @@ Then follow printed steps to create a VM and attach `build/nanokernel.iso` as op
 - No true ring3 user mode yet
 - Syscalls are currently invoked from ring0 demo tasks
 - `int 0x80` ABI is implemented, but real ring3 isolation is planned
-- No filesystem
-- No disk driver
+- Filesystem is initrd-only and read-only
+- No disk block driver
 - All tasks share one address space
 
 ## Roadmap

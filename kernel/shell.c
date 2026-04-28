@@ -1,3 +1,4 @@
+#include "fs.h"
 #include "io.h"
 #include "keyboard.h"
 #include "pit.h"
@@ -43,6 +44,17 @@ static int32_t shell_streq(const char* a, const char* b) {
     return (*a == '\0' && *b == '\0') ? 1 : 0;
 }
 
+static int32_t shell_startswith(const char* text, const char* prefix) {
+    while (*prefix) {
+        if (*text != *prefix) {
+            return 0;
+        }
+        text++;
+        prefix++;
+    }
+    return 1;
+}
+
 static const char* shell_task_state_name(task_state_t state) {
     switch (state) {
         case TASK_UNUSED:
@@ -64,8 +76,28 @@ static void shell_print_help(void) {
     shell_write("  clear  - clear screen\n");
     shell_write("  ticks  - show PIT tick counter\n");
     shell_write("  ps     - show tasks\n");
+    shell_write("  ls     - list initrd files\n");
+    shell_write("  cat X  - print file contents\n");
     shell_write("  about  - show kernel info\n");
     shell_write("  reboot - reboot machine\n");
+}
+
+static void shell_print_file(const uint8_t* data, uint32_t size) {
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+        char out[2];
+        out[0] = (char)data[i];
+        out[1] = '\0';
+        shell_write(out);
+    }
+}
+
+static void shell_list_entry(const fs_file_t* file, void* user) {
+    (void)user;
+    shell_write(file->name);
+    shell_write(" (");
+    shell_write_u32(file->size);
+    shell_write(" bytes)\n");
 }
 
 static void shell_print_ps(void) {
@@ -115,9 +147,25 @@ static void shell_execute(const char* line) {
         shell_write("\n");
     } else if (shell_streq(line, "ps")) {
         shell_print_ps();
+    } else if (shell_streq(line, "ls")) {
+        fs_list(shell_list_entry, (void*)0);
+    } else if (shell_startswith(line, "cat ")) {
+        const char* name = line + 4;
+        const uint8_t* data;
+        uint32_t size;
+        if (*name == '\0') {
+            shell_write("Usage: cat <filename>\n");
+        } else if (fs_read(name, &data, &size) != 0) {
+            shell_write("File not found: ");
+            shell_write(name);
+            shell_write("\n");
+        } else {
+            shell_print_file(data, size);
+            shell_write("\n");
+        }
     } else if (shell_streq(line, "about")) {
-        shell_write("NanoKernel OS v0.3\n");
-        shell_write("Keyboard IRQ + minimal shell\n");
+        shell_write("NanoKernel OS v0.4\n");
+        shell_write("Keyboard IRQ + shell + initrd FS\n");
     } else if (shell_streq(line, "reboot")) {
         shell_reboot();
     } else if (line[0] == '\0') {
